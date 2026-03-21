@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Os Sushinados</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #faf7f2; --surface: #fff; --burgundy: #7a1f2e; --burgundy-light: #a0293f;
+  --gold: #c9973a; --gold-light: #e8b95a; --text: #1a1210; --text-muted: #7a6a62;
+  --border: #e8ddd4; --tag-bg: #f5ede4; --star-on: #c9973a; --star-off: #ddd;
+  --shadow: 0 4px 24px rgba(122,31,46,0.08); --radius: 16px;
+  --green: #2e7a4f; --green-bg: #eaf5ee; --orange: #b85c00; --orange-bg: #fef3e6;
+  --red: #7a1f2e; --red-bg: #fdeaea;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+
+/* ── LOGIN ── */
+#loginScreen { display: flex; min-height: 100vh; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background: var(--burgundy); }
+#loginScreen::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse at 70% 20%, rgba(201,151,58,0.18) 0%, transparent 60%); pointer-events: none; }
+.login-box { background: var(--surface); border-radius: 20px; padding: 36px 32px; width: 100%; max-width: 400px; box-shadow: 0 24px 80px rgba(0,0,0,0.3); position: relative; }
+.login-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--burgundy); margin-bottom: 6px; }
+.login-sub { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 24px; }
+.login-logo { text-align: center; margin-bottom: 20px; }
+.login-logo svg { display: block; margin: 0 auto; }
+.login-logo p { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--burgundy); font-style: italic; margin-top: 6px; }
+.login-field { margin-bottom: 14px; }
+.login-field label { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); font-weight: 500; margin-bottom: 5px; }
+.login-field input { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 11px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--text); outline: none; transition: border-color .2s; }
+.login-field input:focus { border-color: var(--burgundy); }
+.btn-login { width: 100%; background: var(--burgundy); color: #fff; border: none; border-radius: 10px; padding: 12px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-top: 8px; transition: background .2s; }
+.btn-login:hover { background: var(--burgundy-light); }
+.btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
+.login-toggle { text-align: center; margin-top: 14px; font-size: 0.82rem; color: var(--text-muted); }
+.login-toggle a { color: var(--burgundy); cursor: pointer; text-decoration: underline; }
+.login-error { background: var(--red-bg); color: var(--red); border-radius: 8px; padding: 8px 12px; font-size: 0.82rem; margin-bottom: 12px; display: none; }
+.login-error.show { display: block; }
+
+/* ── SAVING INDICATOR ── */
+#savingBar { position: fixed; top: 0; left: 0; right: 0; background: var(--gold); color: #fff; text-align: center; font-size: 0.78rem; padding: 6px; z-index: 9999; display: none; font-weight: 500; }
+#savingBar.show { display: block; }
+
+/* ── HEADER ── */
+#appScreen { display: none; }
+header { background: var(--burgundy); padding: 32px 24px 0; text-align: center; position: relative; overflow: hidden; }
+header::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 70% 0%, rgba(201,151,58,0.18) 0%, transparent 60%); pointer-events: none; }
+.header-top { display: flex; justify-content: flex-end; padding-bottom: 0; position: relative; z-index: 1; }
+.btn-logout { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.7); border-radius: 8px; padding: 4px 12px; font-family: 'DM Sans', sans-serif; font-size: 0.75rem; cursor: pointer; transition: background .2s; }
+.btn-logout:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+.tabs { display: flex; justify-content: center; margin-top: 20px; }
+.tab { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.7); border: none; padding: 11px 24px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; cursor: pointer; border-radius: 10px 10px 0 0; transition: background .2s, color .2s; display: flex; align-items: center; gap: 6px; }
+.tab:hover { background: rgba(255,255,255,0.2); color: #fff; }
+.tab.active { background: var(--bg); color: var(--burgundy); font-weight: 600; }
+.tab .tab-count { background: rgba(255,255,255,0.25); color: rgba(255,255,255,0.9); font-size: 0.72rem; padding: 1px 7px; border-radius: 10px; font-weight: 600; }
+.tab.active .tab-count { background: var(--tag-bg); color: var(--burgundy); }
+
+.stats-bar { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; justify-content: center; gap: 32px; padding: 14px 24px; flex-wrap: wrap; }
+.stat { text-align: center; }
+.stat-value { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--burgundy); font-weight: 700; line-height: 1; }
+.stat-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+
+.container { max-width: 1020px; margin: 0 auto; padding: 24px 16px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.toolbar { display: flex; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; align-items: center; }
+.toolbar input, .toolbar select { background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; color: var(--text); outline: none; transition: border-color .2s; }
+.toolbar input { flex: 1; min-width: 160px; }
+.toolbar input:focus, .toolbar select:focus { border-color: var(--burgundy); }
+.toolbar select { cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a6a62' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; padding-right: 26px; }
+.btn-add { background: var(--burgundy); color: #fff; border: none; border-radius: 10px; padding: 10px 20px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background .2s, transform .1s; white-space: nowrap; }
+.btn-add:hover { background: var(--burgundy-light); }
+.btn-add:active { transform: scale(0.97); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px; }
+
+.card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; transition: transform .2s, box-shadow .2s; animation: fadeIn .3s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.card:hover { transform: translateY(-3px); box-shadow: 0 10px 36px rgba(122,31,46,0.14); }
+
+.card-gallery { position: relative; width: 100%; height: 170px; overflow: hidden; background: linear-gradient(135deg,#f5ede4,#ede0d4); }
+.gallery-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .35s; }
+.gallery-img.active { opacity: 1; }
+.gallery-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.8rem; opacity: 0.5; }
+.gallery-nav { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; pointer-events: none; }
+.gallery-btn { background: rgba(0,0,0,0.4); color: #fff; border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: center; pointer-events: all; opacity: 0; transition: opacity .2s; }
+.card-gallery:hover .gallery-btn, .card-gallery .gallery-btn.visible { opacity: 0.75; }
+.gallery-dots { position: absolute; bottom: 7px; left: 0; right: 0; display: flex; justify-content: center; gap: 5px; pointer-events: none; }
+.gallery-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.5); transition: background .2s; }
+.gallery-dot.active { background: #fff; }
+.gallery-count { position: absolute; top: 7px; right: 8px; background: rgba(0,0,0,0.45); color: #fff; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; font-weight: 500; cursor: pointer; }
+
+.card-body { padding: 18px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.card-name { font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--text); font-weight: 700; line-height: 1.2; flex: 1; }
+.card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.icon-btn { background: none; border: none; cursor: pointer; font-size: 1rem; opacity: 0.45; transition: opacity .15s; padding: 2px; line-height: 1; }
+.icon-btn:hover, .icon-btn.fav-on { opacity: 1; }
+.card-stars { display: flex; gap: 2px; }
+.card-stars span { font-size: 1rem; }
+.card-star-on { color: var(--star-on); }
+.card-star-off { color: var(--star-off); }
+.card-meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.tag { background: var(--tag-bg); color: var(--burgundy); font-size: 0.71rem; font-weight: 500; padding: 3px 9px; border-radius: 20px; }
+.tag-city { background: #eef3fb; color: #2a4a8a; }
+.tag-price { background: #f0f7f0; color: #2e6e2e; font-weight: 600; }
+.tag-date { font-size: 0.71rem; color: var(--text-muted); }
+.badge-voltar { font-size: 0.71rem; font-weight: 600; padding: 3px 9px; border-radius: 20px; display: inline-flex; align-items: center; gap: 3px; }
+.badge-sim { background: var(--green-bg); color: var(--green); }
+.badge-talvez { background: var(--orange-bg); color: var(--orange); }
+.badge-nao { background: var(--red-bg); color: var(--red); }
+.card-notes { font-size: 0.85rem; color: var(--text-muted); line-height: 1.55; font-style: italic; border-left: 3px solid var(--gold-light); padding-left: 10px; }
+
+.wishcard { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); border: 1.5px dashed var(--border); padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; transition: transform .2s, box-shadow .2s; animation: fadeIn .3s ease; }
+.wishcard:hover { transform: translateY(-3px); box-shadow: 0 10px 36px rgba(122,31,46,0.1); }
+.wishcard-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.wishcard-notes { font-size: 0.83rem; color: var(--text-muted); font-style: italic; }
+.btn-convert { background: var(--burgundy); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-family: 'DM Sans', sans-serif; font-size: 0.78rem; font-weight: 500; cursor: pointer; transition: background .2s; white-space: nowrap; align-self: flex-start; margin-top: 4px; }
+.btn-convert:hover { background: var(--burgundy-light); }
+
+.ranking-section { margin-bottom: 36px; }
+.ranking-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--burgundy); margin-bottom: 14px; }
+.ranking-list { display: flex; flex-direction: column; gap: 10px; }
+.rank-item { background: var(--surface); border-radius: 12px; padding: 14px 18px; display: flex; align-items: center; gap: 14px; box-shadow: var(--shadow); border: 1px solid var(--border); animation: fadeIn .3s ease; }
+.rank-pos { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; color: var(--text-muted); width: 32px; text-align: center; flex-shrink: 0; }
+.rank-pos.gold { color: #c9a227; } .rank-pos.silver { color: #9e9e9e; } .rank-pos.bronze { color: #a0522d; }
+.rank-cover { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.rank-cover-ph { width: 52px; height: 52px; border-radius: 10px; background: linear-gradient(135deg,#f5ede4,#ede0d4); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
+.rank-info { flex: 1; min-width: 0; }
+.rank-name { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; }
+.rank-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; align-items: center; }
+.rank-stars { display: flex; gap: 1px; }
+.rank-stars span { font-size: 0.85rem; }
+.ranking-empty { color: var(--text-muted); font-style: italic; font-size: 0.9rem; padding: 12px 0; }
+
+.chart-wrap { background: var(--surface); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 28px; }
+.chart-wrap h3 { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--burgundy); margin-bottom: 16px; }
+.chart-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.chart-label { width: 60px; font-size: 0.82rem; color: var(--text-muted); text-align: right; flex-shrink: 0; }
+.chart-bar-bg { flex: 1; background: var(--tag-bg); border-radius: 6px; height: 18px; overflow: hidden; }
+.chart-bar { height: 100%; background: linear-gradient(90deg, var(--burgundy), var(--burgundy-light)); border-radius: 6px; transition: width .6s ease; }
+.chart-count { width: 24px; font-size: 0.82rem; color: var(--text-muted); font-weight: 500; }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(26,18,16,0.55); backdrop-filter: blur(4px); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: var(--radius); padding: 30px 26px; width: 100%; max-width: 540px; box-shadow: 0 24px 80px rgba(122,31,46,0.2); animation: slideUp .25s ease; max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+@keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+.modal h2 { font-family: 'Playfair Display', serif; font-size: 1.45rem; margin-bottom: 20px; color: var(--burgundy); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 0.77rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 13px; font-family: 'DM Sans', sans-serif; font-size: 0.93rem; color: var(--text); outline: none; transition: border-color .2s; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--burgundy); }
+.form-group textarea { resize: vertical; min-height: 80px; }
+.star-picker { display: flex; gap: 6px; }
+.sp-star { font-size: 1.9rem; cursor: pointer; color: var(--star-off); transition: color .15s, transform .1s; line-height: 1; user-select: none; }
+.sp-star.on { color: var(--star-on); }
+.sp-star:hover { transform: scale(1.15); }
+
+.photo-section-header { display: flex; justify-content: space-between; align-items: center; font-size: 0.77rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); font-weight: 500; margin-bottom: 8px; }
+.photo-grid-upload { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 8px; margin-bottom: 16px; }
+.photo-thumb-wrap { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; }
+.photo-thumb-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-thumb-remove { position: absolute; top: 3px; right: 3px; background: rgba(0,0,0,0.55); color: #fff; border: none; border-radius: 5px; width: 20px; height: 20px; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.photo-thumb-capa { position: absolute; bottom: 3px; left: 3px; background: var(--gold); color: #fff; font-size: 0.58rem; font-weight: 700; padding: 1px 5px; border-radius: 4px; }
+.photo-add-btn { aspect-ratio: 1; border: 2px dashed var(--border); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: var(--bg); transition: border-color .2s, background .2s; font-size: 1.4rem; color: var(--text-muted); gap: 4px; }
+.photo-add-btn span { font-size: 0.7rem; font-family: 'DM Sans', sans-serif; }
+.photo-add-btn:hover { border-color: var(--burgundy); background: #fdf6f0; color: var(--burgundy); }
+#fPhotoInput { display: none; }
+
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+.btn-cancel { background: none; border: 1.5px solid var(--border); border-radius: 10px; padding: 10px 20px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; cursor: pointer; color: var(--text-muted); transition: border-color .2s; }
+.btn-cancel:hover { border-color: var(--text-muted); }
+.btn-save { background: var(--burgundy); color: #fff; border: none; border-radius: 10px; padding: 10px 24px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500; cursor: pointer; transition: background .2s; }
+.btn-save:hover { background: var(--burgundy-light); }
+.btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.93); z-index: 200; align-items: center; justify-content: center; }
+.lightbox.open { display: flex; }
+.lightbox img { max-width: 92vw; max-height: 88vh; border-radius: 8px; object-fit: contain; user-select: none; }
+.lightbox-close { position: absolute; top: 16px; right: 20px; color: #fff; font-size: 2rem; cursor: pointer; background: none; border: none; line-height: 1; opacity: 0.8; }
+.lightbox-close:hover { opacity: 1; }
+.lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.15); color: #fff; border: none; border-radius: 50%; width: 44px; height: 44px; font-size: 1.3rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .2s; }
+.lightbox-nav:hover { background: rgba(255,255,255,0.3); }
+.lightbox-prev { left: 16px; } .lightbox-next { right: 16px; }
+.lightbox-counter { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.7); font-size: 0.85rem; }
+
+.empty { grid-column: 1/-1; text-align: center; padding: 56px 24px; color: var(--text-muted); }
+.empty-icon { font-size: 3.2rem; margin-bottom: 12px; opacity: 0.4; }
+.empty h3 { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--text); margin-bottom: 6px; }
+.empty p { font-size: 0.88rem; }
+
+#loadingScreen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 999; flex-direction: column; gap: 12px; }
+#loadingScreen p { color: var(--text-muted); font-size: 0.9rem; }
+.spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--burgundy); border-radius: 50%; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.backup-bar { padding: 8px 24px 0; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.btn-backup { background: none; border: none; padding: 4px 6px; font-family: 'DM Sans', sans-serif; font-size: 0.72rem; cursor: pointer; color: var(--border); transition: color .2s; text-decoration: underline; text-underline-offset: 3px; }
+.btn-backup:hover { color: var(--text-muted); }
+.backup-sep { color: var(--border); font-size: 0.72rem; }
+#importFileInput { display: none; }
+
+footer { text-align: center; padding: 24px 16px; font-size: 0.78rem; color: var(--text-muted); border-top: 1px solid var(--border); margin-top: 32px; }
+
+@media (max-width: 640px) {
+  header { padding: 22px 14px 0; }
+  .tabs { gap: 2px; }
+  .tab { padding: 9px 12px; font-size: 0.78rem; gap: 4px; }
+  .tab .tab-count { display: none; }
+  .stats-bar { gap: 0; padding: 0; }
+  .stat { flex: 1 1 50%; padding: 12px 8px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .stat:nth-child(2) { border-right: none; }
+  .stat:nth-child(3) { border-bottom: none; }
+  .stat:nth-child(4) { border-right: none; border-bottom: none; }
+  .stat-value { font-size: 1.2rem; }
+  .toolbar { gap: 8px; }
+  .toolbar input { width: 100%; min-width: unset; }
+  .toolbar select { flex: 1 1 calc(50% - 4px); min-width: 0; font-size: 0.8rem; padding: 9px 26px 9px 10px; }
+  .btn-add { width: 100%; justify-content: center; }
+  .grid { grid-template-columns: 1fr; gap: 14px; }
+  .gallery-btn { opacity: 0.75 !important; }
+  .container { padding: 16px 12px; }
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal { border-radius: 16px 16px 0 0; max-height: 95vh; padding: 24px 18px calc(24px + env(safe-area-inset-bottom)); }
+  footer { font-size: 0.72rem; padding: 16px 12px; }
+}
+</style>
+</head>
+<body>
+
+<div id="loadingScreen"><div class="spinner"></div><p>Carregando…</p></div>
+<div id="savingBar">Salvando…</div>
+
+<!-- ══ LOGIN ══ -->
+<div id="loginScreen" style="display:none">
+  <div class="login-box">
+    <div class="login-logo">
+      <svg width="72" height="68" viewBox="0 0 82 68" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="27" cy="35" rx="24" ry="23" stroke="#7a1f2e" stroke-width="3.5" fill="none" opacity="0.9"/>
+        <ellipse cx="27" cy="41" rx="11" ry="8" fill="#2c1a0e"/>
+        <ellipse cx="20" cy="31" rx="7" ry="6.5" fill="#2c1a0e"/>
+        <polygon points="16,26 13,20 19,24" fill="#2c1a0e"/>
+        <polygon points="24,26 27,20 21,24" fill="#2c1a0e"/>
+        <path d="M17 30.5 Q18.5 29.2 20 30.5" stroke="#f5e6c8" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        <path d="M21.5 30.5 Q23 29.2 24.5 30.5" stroke="#f5e6c8" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+        <path d="M36 38 Q42 34 40 44 Q38 50 30 44" stroke="#2c1a0e" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+        <text x="56" y="56" font-size="52" fill="#7a1f2e" font-family="'Playfair Display', Georgia, serif" font-style="italic" font-weight="700">s</text>
+      </svg>
+      <p>Os Sushinados</p>
+    </div>
+    <div class="login-error" id="loginError"></div>
+    <div id="loginMode">
+      <div class="login-title">Bem-vindos de volta!</div>
+      <div class="login-sub">Entre com sua conta para acessar seus restaurantes.</div>
+      <div class="login-field"><label>E-mail</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email"></div>
+      <div class="login-field"><label>Senha</label><input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"></div>
+      <button class="btn-login" id="btnLogin" onclick="signIn()">Entrar</button>
+      <div class="login-toggle">Primeira vez? <a onclick="showRegister()">Criar conta</a></div>
+    </div>
+    <div id="registerMode" style="display:none">
+      <div class="login-title">Criar conta</div>
+      <div class="login-sub">Crie a conta de vocês para começar.</div>
+      <div class="login-field"><label>E-mail</label><input type="email" id="regEmail" placeholder="seu@email.com" autocomplete="email"></div>
+      <div class="login-field"><label>Senha</label><input type="password" id="regPassword" placeholder="Mínimo 6 caracteres" autocomplete="new-password"></div>
+      <button class="btn-login" id="btnRegister" onclick="signUp()">Criar conta</button>
+      <div class="login-toggle">Já tem conta? <a onclick="showLogin()">Entrar</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="appScreen">
+  <header>
+    <div class="header-top"><button class="btn-logout" onclick="logout()">Sair</button></div>
+    <h1 style="line-height:1;padding:0;text-align:center;margin-top:-4px">
+      <svg width="100%" viewBox="0 0 520 70" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto;max-width:420px">
+        <ellipse cx="52" cy="35" rx="30" ry="29" stroke="#f5e6c8" stroke-width="4" fill="none" opacity="0.9"/>
+        <ellipse cx="52" cy="41" rx="14" ry="10" fill="#1a0e06"/>
+        <ellipse cx="43" cy="31" rx="9" ry="8.5" fill="#1a0e06"/>
+        <polygon points="38,25 34,17 43,23" fill="#1a0e06"/>
+        <polygon points="49,25 53,17 44,23" fill="#1a0e06"/>
+        <polygon points="38,24 35,19 41,22" fill="#e8b95a" opacity="0.45"/>
+        <polygon points="48,24 52,19 44,22" fill="#e8b95a" opacity="0.45"/>
+        <path d="M39 30.5 Q41 29 43 30.5" stroke="#f5e6c8" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+        <path d="M44 30.5 Q46 29 48 30.5" stroke="#f5e6c8" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+        <ellipse cx="43.5" cy="33" rx="1.2" ry="0.8" fill="#e8b95a" opacity="0.7"/>
+        <line x1="34" y1="32.5" x2="40" y2="33.5" stroke="#f5e6c8" stroke-width="0.8" opacity="0.5"/>
+        <line x1="33.5" y1="34.5" x2="40" y2="34.2" stroke="#f5e6c8" stroke-width="0.8" opacity="0.5"/>
+        <line x1="47" y1="33.5" x2="53" y2="32.5" stroke="#f5e6c8" stroke-width="0.8" opacity="0.5"/>
+        <line x1="47" y1="34.2" x2="53.5" y2="34.5" stroke="#f5e6c8" stroke-width="0.8" opacity="0.5"/>
+        <path d="M64 40 Q72 35 70 47 Q68 55 57 48" stroke="#1a0e06" stroke-width="4" fill="none" stroke-linecap="round"/>
+        <text x="60" y="24" font-size="8" fill="#e8b95a" opacity="0.65" font-family="Georgia, serif" font-style="italic">z z</text>
+        <text x="88" y="56" font-size="52" fill="#f5e6c8" font-family="'Playfair Display', Georgia, serif" font-style="italic" font-weight="700">s</text>
+        <text x="118" y="56" font-size="52" fill="#e8b95a" font-family="'Playfair Display', Georgia, serif" font-style="italic" font-weight="700">Sushinados</text>
+      </svg>
+    </h1>
+    <p style="color:rgba(255,255,255,0.6);font-size:.88rem;margin-top:4px;font-weight:300">Suas avaliações gastronômicas · salvas na nuvem ☁️</p>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('ja-fui')" id="tab-ja-fui">🍽️ Já Fui <span class="tab-count" id="cnt-ja-fui">0</span></button>
+      <button class="tab" onclick="switchTab('quero-ir')" id="tab-quero-ir">📌 Quero Ir <span class="tab-count" id="cnt-quero-ir">0</span></button>
+      <button class="tab" onclick="switchTab('ranking')" id="tab-ranking">🏆 Ranking</button>
+    </div>
+  </header>
+
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-value" id="statTotal">0</div><div class="stat-label">Visitados</div></div>
+    <div class="stat"><div class="stat-value" id="statAvg">—</div><div class="stat-label">Média ★</div></div>
+    <div class="stat"><div class="stat-value" id="statFav">0</div><div class="stat-label">Favoritos</div></div>
+    <div class="stat"><div class="stat-value" id="statWish">0</div><div class="stat-label">Lista Desejos</div></div>
+  </div>
+
+  <div class="container">
+    <div class="tab-panel active" id="panel-ja-fui">
+      <div class="toolbar">
+        <input type="text" id="searchInput" placeholder="🔍  Buscar…" oninput="renderJaFui()">
+        <select id="filterCuisine" onchange="renderJaFui()"><option value="">Todos os tipos</option></select>
+        <select id="filterStars" onchange="renderJaFui()">
+          <option value="">Todas ★</option><option value="5">★★★★★</option><option value="4">★★★★+</option><option value="3">★★★+</option>
+        </select>
+        <select id="filterVoltar" onchange="renderJaFui()">
+          <option value="">Todos</option><option value="sim">Quer voltar ✅</option><option value="talvez">Talvez 🤔</option><option value="nao">Não volta ❌</option>
+        </select>
+        <select id="sortBy" onchange="renderJaFui()">
+          <option value="date">Mais recente</option><option value="stars">Melhor avaliação</option><option value="name">Nome A-Z</option>
+        </select>
+        <button class="btn-add" onclick="openModal()">＋ Adicionar</button>
+      </div>
+      <div class="grid" id="grid-ja-fui"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-quero-ir">
+      <div class="toolbar">
+        <input type="text" id="wishSearch" placeholder="🔍  Buscar…" oninput="renderQueroIr()">
+        <button class="btn-add" onclick="openWishModal()">＋ Adicionar</button>
+      </div>
+      <div class="grid" id="grid-quero-ir"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-ranking">
+      <div id="rankingContent"></div>
+    </div>
+  </div>
+
+  <!-- MODAL JÁ FUI -->
+  <div class="modal-overlay" id="modalJaFui" onclick="overlayClick(event,'modalJaFui')">
+    <div class="modal">
+      <h2 id="modalTitle">Novo Restaurante</h2>
+      <div class="form-group">
+        <div class="photo-section-header"><span>Fotos</span><span id="photoCount" style="font-weight:400"></span></div>
+        <div class="photo-grid-upload" id="photoGridUpload"></div>
+        <input type="file" id="fPhotoInput" accept="image/*" multiple onchange="handlePhotos(event)">
+      </div>
+      <div class="form-group"><label>Nome do Restaurante *</label><input type="text" id="fName" placeholder="Ex: Cantina da Nonna"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Tipo de Culinária</label><input type="text" id="fCuisine" placeholder="Italiana, Japonesa…" list="cuisineList"><datalist id="cuisineList"></datalist></div>
+        <div class="form-group"><label>Cidade</label><input type="text" id="fCity" placeholder="Ex: São Paulo"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Faixa de Preço</label>
+          <select id="fPrice"><option value="">— Não informado</option><option value="$">$ · Barato</option><option value="$$">$$ · Moderado</option><option value="$$$">$$$ · Caro</option><option value="$$$$">$$$$ · Luxo</option></select>
+        </div>
+        <div class="form-group"><label>Data da Visita</label><input type="date" id="fDate"></div>
+      </div>
+      <div class="form-group"><label>Avaliação</label>
+        <div class="star-picker" id="starPicker">
+          <span class="sp-star" data-v="1" onclick="setStar(1)">★</span><span class="sp-star" data-v="2" onclick="setStar(2)">★</span><span class="sp-star" data-v="3" onclick="setStar(3)">★</span><span class="sp-star" data-v="4" onclick="setStar(4)">★</span><span class="sp-star" data-v="5" onclick="setStar(5)">★</span>
+        </div>
+      </div>
+      <div class="form-group"><label>Quer Voltar?</label>
+        <select id="fVoltar"><option value="">— Sem resposta</option><option value="sim">✅ Sim, com certeza!</option><option value="talvez">🤔 Talvez</option><option value="nao">❌ Não voltaria</option></select>
+      </div>
+      <div class="form-group"><label>Observações / Pratos favoritos</label><textarea id="fNotes" placeholder="O que você mais gostou? Tem algum prato imperdível?"></textarea></div>
+      <div class="form-group"><label>Link do Maps (Google Maps, Waze…)</label><input type="url" id="fMaps" placeholder="Cole aqui o link do Maps"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('modalJaFui')">Cancelar</button>
+        <button class="btn-save" id="btnSaveJaFui" onclick="saveJaFui()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL QUERO IR -->
+  <div class="modal-overlay" id="modalQueroIr" onclick="overlayClick(event,'modalQueroIr')">
+    <div class="modal">
+      <h2 id="modalWishTitle">Quero Ir</h2>
+      <div class="form-group"><label>Nome do Restaurante *</label><input type="text" id="wName" placeholder="Ex: Temakeria do Bairro"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Tipo de Culinária</label><input type="text" id="wCuisine" placeholder="Japonesa…"></div>
+        <div class="form-group"><label>Cidade</label><input type="text" id="wCity" placeholder="Ex: Curitiba"></div>
+      </div>
+      <div class="form-group"><label>Por que quer ir?</label><textarea id="wNotes" placeholder="Ex: Indicação de amigo…"></textarea></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('modalQueroIr')">Cancelar</button>
+        <button class="btn-save" id="btnSaveWish" onclick="saveWish()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX -->
+  <div class="lightbox" id="lightbox">
+    <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    <button class="lightbox-nav lightbox-prev" onclick="lightboxNav(-1)">‹</button>
+    <img id="lightboxImg" src="" alt="">
+    <button class="lightbox-nav lightbox-next" onclick="lightboxNav(1)">›</button>
+    <div class="lightbox-counter" id="lightboxCounter"></div>
+  </div>
+
+  <div class="backup-bar">
+    <button class="btn-backup" onclick="exportBackup()">exportar backup</button>
+    <span class="backup-sep">·</span>
+    <button class="btn-backup" onclick="document.getElementById('importFileInput').click()">importar backup</button>
+    <input type="file" id="importFileInput" accept=".json" onchange="importBackup(event)">
+  </div>
+
+  <footer>
+    © Todos os direitos reservados à <strong style="color:var(--burgundy)">Eduardo Hackenhaar de Souza</strong> e <strong style="color:var(--burgundy)">Júlia Midori Kolbe</strong>
+    <br><br>
+    <span style="font-size:0.85rem;color:var(--burgundy);font-family:'Playfair Display',serif;font-style:italic">Te amo para sempre!</span>
+  </footer>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" style="display:none">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button class="lightbox-nav lightbox-prev" onclick="lightboxNav(-1)">‹</button>
+  <img id="lightboxImg" src="" alt="">
+  <button class="lightbox-nav lightbox-next" onclick="lightboxNav(1)">›</button>
+  <div class="lightbox-counter" id="lightboxCounter"></div>
+</div>
+
+<script>
+// ══ SUPABASE ══
+const { createClient } = supabase;
+const sb = createClient(
+  'https://vfwlqypvizqelfghjula.supabase.co',
+  'sb_publishable_F8zeGjaQo5xxJOW9AD4DtQ_glAQ9Mo6'
+);
+
+// ══ STATE ══
+let currentUser = null;
+let restaurants = [], wishes = [];
+let photoCache = {}; // { restaurantId: [{id, data, sort_order}] }
+let editingId = null, editingWishId = null;
+let currentStars = 0, currentPhotos = [];
+let lbPhotos = [], lbIndex = 0;
+
+// ══ AUTH ══
+function showLogin()    { document.getElementById('loginMode').style.display='block'; document.getElementById('registerMode').style.display='none'; }
+function showRegister() { document.getElementById('loginMode').style.display='none'; document.getElementById('registerMode').style.display='block'; }
+function loginError(msg){ const el=document.getElementById('loginError'); el.textContent=msg; el.classList.add('show'); }
+function clearLoginError(){ document.getElementById('loginError').classList.remove('show'); }
+
+async function signIn() {
+  clearLoginError();
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) { loginError('Preencha e-mail e senha.'); return; }
+  const btn = document.getElementById('btnLogin');
+  btn.disabled = true; btn.textContent = 'Entrando…';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = 'Entrar';
+  if (error) { loginError('E-mail ou senha incorretos.'); return; }
+}
+
+async function signUp() {
+  clearLoginError();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  if (!email || !password) { loginError('Preencha e-mail e senha.'); return; }
+  if (password.length < 6) { loginError('A senha deve ter pelo menos 6 caracteres.'); return; }
+  const btn = document.getElementById('btnRegister');
+  btn.disabled = true; btn.textContent = 'Criando…';
+  const { error } = await sb.auth.signUp({ email, password });
+  btn.disabled = false; btn.textContent = 'Criar conta';
+  if (error) { loginError('Erro ao criar conta: ' + error.message); return; }
+  loginError('✅ Conta criada! Verifique seu e-mail para confirmar, depois entre.');
+  document.getElementById('loginError').style.background = 'var(--green-bg)';
+  document.getElementById('loginError').style.color = 'var(--green)';
+}
+
+async function logout() {
+  if (!confirm('Sair da conta?')) return;
+  await sb.auth.signOut();
+}
+
+// ══ SAVING BAR ══
+function showSaving() { document.getElementById('savingBar').classList.add('show'); }
+function hideSaving() { document.getElementById('savingBar').classList.remove('show'); }
+
+// ══ CLOUD DATA OPS ══
+async function loadAll() {
+  const [{ data: rests }, { data: wishs }, { data: photos }] = await Promise.all([
+    sb.from('restaurants').select('*').order('created_at', { ascending: false }),
+    sb.from('wishes').select('*').order('created_at', { ascending: false }),
+    sb.from('photos').select('*').order('sort_order'),
+  ]);
+  restaurants = (rests || []).map(r => ({ ...r, date: r.visit_date }));
+  wishes = wishs || [];
+  photoCache = {};
+  (photos || []).forEach(p => {
+    if (!photoCache[p.restaurant_id]) photoCache[p.restaurant_id] = [];
+    photoCache[p.restaurant_id].push(p);
+  });
+}
+
+async function cloudSaveRestaurant(data, photos) {
+  showSaving();
+  try {
+    const row = { ...data, visit_date: data.date, user_id: currentUser.id };
+    delete row.date;
+    const { error } = await sb.from('restaurants').upsert(row);
+    if (error) throw error;
+
+    // Fotos: apaga antigas e insere novas
+    await sb.from('photos').delete().eq('restaurant_id', data.id);
+    if (photos.length > 0) {
+      const photoRows = photos.map((p, i) => ({
+        id: `${data.id}_${i}`,
+        restaurant_id: data.id,
+        user_id: currentUser.id,
+        data: p.dataURL,
+        sort_order: i,
+      }));
+      await sb.from('photos').insert(photoRows);
+      photoCache[data.id] = photoRows;
+    } else {
+      delete photoCache[data.id];
+    }
+  } finally { hideSaving(); }
+}
+
+async function cloudDeleteRestaurant(id) {
+  showSaving();
+  try {
+    await sb.from('photos').delete().eq('restaurant_id', id);
+    await sb.from('restaurants').delete().eq('id', id);
+    delete photoCache[id];
+  } finally { hideSaving(); }
+}
+
+async function cloudSaveWish(data) {
+  showSaving();
+  try {
+    const { error } = await sb.from('wishes').upsert({ ...data, user_id: currentUser.id });
+    if (error) throw error;
+  } finally { hideSaving(); }
+}
+
+async function cloudDeleteWish(id) {
+  showSaving();
+  try { await sb.from('wishes').delete().eq('id', id); }
+  finally { hideSaving(); }
+}
+
+// ══ TABS ══
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name==='ranking') renderRanking();
+}
+
+// ══ STARS ══
+function setStar(v) { currentStars=v; document.querySelectorAll('.sp-star').forEach(s=>s.classList.toggle('on',+s.dataset.v<=v)); }
+function resetStars() { currentStars=0; document.querySelectorAll('.sp-star').forEach(s=>s.classList.remove('on')); }
+
+// ══ IMAGE COMPRESSION ══
+function compressImage(dataURL, maxSize=1024, quality=0.75) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxSize || h > maxSize) {
+        if (w > h) { h = Math.round(h * maxSize / w); w = maxSize; }
+        else { w = Math.round(w * maxSize / h); h = maxSize; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = dataURL;
+  });
+}
+
+// ══ PHOTOS IN MODAL ══
+function handlePhotos(e) {
+  Array.from(e.target.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      const compressed = await compressImage(ev.target.result);
+      currentPhotos.push({ dataURL: compressed });
+      refreshPhotoGrid();
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+}
+function removeThumb(i) { currentPhotos.splice(i,1); refreshPhotoGrid(); }
+function refreshPhotoGrid() {
+  const grid = document.getElementById('photoGridUpload');
+  const n = currentPhotos.length;
+  document.getElementById('photoCount').textContent = n ? `${n} foto${n>1?'s':''}` : '';
+  grid.innerHTML = '';
+  currentPhotos.forEach((p,i) => {
+    const d = document.createElement('div');
+    d.className = 'photo-thumb-wrap';
+    d.innerHTML = `<img src="${p.dataURL}" alt="">${i===0?'<span class="photo-thumb-capa">CAPA</span>':''}<button class="photo-thumb-remove" onclick="removeThumb(${i})">✕</button>`;
+    grid.appendChild(d);
+  });
+  const add = document.createElement('div');
+  add.className = 'photo-add-btn';
+  add.innerHTML = '<span>📷</span><span>Adicionar</span>';
+  add.onclick = () => document.getElementById('fPhotoInput').click();
+  grid.appendChild(add);
+}
+
+// ══ MODAL JÁ FUI ══
+function openModal(id=null) {
+  editingId = id;
+  document.getElementById('modalJaFui').classList.add('open');
+  currentPhotos = [];
+  if (id) {
+    const r = restaurants.find(x=>x.id===id);
+    document.getElementById('modalTitle').textContent = 'Editar Restaurante';
+    document.getElementById('fName').value    = r.name;
+    document.getElementById('fCuisine').value = r.cuisine||'';
+    document.getElementById('fCity').value    = r.city||'';
+    document.getElementById('fPrice').value   = r.price||'';
+    document.getElementById('fDate').value    = r.date||'';
+    document.getElementById('fVoltar').value  = r.voltar||'';
+    document.getElementById('fNotes').value   = r.notes||'';
+    document.getElementById('fMaps').value    = r.maps_link||'';
+    setStar(r.stars||0);
+    const cached = photoCache[id] || [];
+    currentPhotos = cached.map(p => ({ dataURL: p.data }));
+    refreshPhotoGrid();
+  } else {
+    document.getElementById('modalTitle').textContent = 'Novo Restaurante';
+    ['fName','fCuisine','fCity','fNotes','fMaps'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('fPrice').value=''; document.getElementById('fDate').value=todayISO(); document.getElementById('fVoltar').value='';
+    resetStars(); refreshPhotoGrid();
+  }
+  setTimeout(()=>document.getElementById('fName').focus(),100);
+}
+
+async function saveJaFui() {
+  const name = document.getElementById('fName').value.trim();
+  if (!name) { alert('Informe o nome do restaurante.'); return; }
+  const id = editingId || Date.now().toString();
+  const existing = editingId ? restaurants.find(x=>x.id===editingId) : null;
+  const data = { id, name,
+    cuisine:   document.getElementById('fCuisine').value.trim(),
+    city:      document.getElementById('fCity').value.trim(),
+    price:     document.getElementById('fPrice').value,
+    stars:     currentStars,
+    voltar:    document.getElementById('fVoltar').value,
+    date:      document.getElementById('fDate').value,
+    notes:     document.getElementById('fNotes').value.trim(),
+    maps_link: document.getElementById('fMaps').value.trim(),
+    fav:       existing?.fav||false,
+    photo_count: currentPhotos.length,
+    created_at: existing?.created_at||Date.now(),
+  };
+  const btn = document.getElementById('btnSaveJaFui');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try {
+    await cloudSaveRestaurant(data, currentPhotos);
+    restaurants = editingId ? restaurants.map(r=>r.id===id?data:r) : [data,...restaurants];
+    closeModal('modalJaFui'); renderAll();
+  } catch(e) { alert('Erro ao salvar: '+e.message); }
+  finally { btn.disabled=false; btn.textContent='Salvar'; }
+}
+
+async function toggleFav(id) {
+  restaurants = restaurants.map(r=>r.id===id?{...r,fav:!r.fav}:r);
+  const r = restaurants.find(x=>x.id===id);
+  showSaving();
+  try { await sb.from('restaurants').update({ fav: r.fav }).eq('id', id); }
+  finally { hideSaving(); renderAll(); }
+}
+
+async function deleteRest(id) {
+  if (!confirm('Remover este restaurante?')) return;
+  await cloudDeleteRestaurant(id);
+  restaurants = restaurants.filter(r=>r.id!==id);
+  renderAll();
+}
+
+// ══ MODAL QUERO IR ══
+function openWishModal(id=null) {
+  editingWishId = id;
+  document.getElementById('modalQueroIr').classList.add('open');
+  if (id) {
+    const w = wishes.find(x=>x.id===id);
+    document.getElementById('modalWishTitle').textContent='Editar';
+    document.getElementById('wName').value=w.name; document.getElementById('wCuisine').value=w.cuisine||''; document.getElementById('wCity').value=w.city||''; document.getElementById('wNotes').value=w.notes||'';
+  } else {
+    document.getElementById('modalWishTitle').textContent='Quero Ir';
+    ['wName','wCuisine','wCity','wNotes'].forEach(f=>document.getElementById(f).value='');
+  }
+  setTimeout(()=>document.getElementById('wName').focus(),100);
+}
+
+async function saveWish() {
+  const name = document.getElementById('wName').value.trim();
+  if (!name) { alert('Informe o nome.'); return; }
+  const data = { id: editingWishId||Date.now().toString(), name, cuisine: document.getElementById('wCuisine').value.trim(), city: document.getElementById('wCity').value.trim(), notes: document.getElementById('wNotes').value.trim(), created_at: editingWishId?(wishes.find(x=>x.id===editingWishId)?.created_at||Date.now()):Date.now() };
+  const btn = document.getElementById('btnSaveWish');
+  btn.disabled=true; btn.textContent='Salvando…';
+  try {
+    await cloudSaveWish(data);
+    wishes = editingWishId ? wishes.map(w=>w.id===editingWishId?data:w) : [data,...wishes];
+    closeModal('modalQueroIr'); renderAll();
+  } catch(e) { alert('Erro: '+e.message); }
+  finally { btn.disabled=false; btn.textContent='Salvar'; }
+}
+
+async function deleteWish(id) {
+  if (!confirm('Remover da lista?')) return;
+  await cloudDeleteWish(id);
+  wishes = wishes.filter(w=>w.id!==id); renderAll();
+}
+
+async function convertWish(id) {
+  const w = wishes.find(x=>x.id===id); if(!w)return;
+  await cloudDeleteWish(id);
+  wishes = wishes.filter(x=>x.id!==id);
+  renderAll(); switchTab('ja-fui'); openModal();
+  document.getElementById('fName').value=w.name; document.getElementById('fCuisine').value=w.cuisine||''; document.getElementById('fCity').value=w.city||''; document.getElementById('fNotes').value=w.notes||'';
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); editingId=null; editingWishId=null; }
+function overlayClick(e,id) { if(e.target===document.getElementById(id)) closeModal(id); }
+
+// ══ RENDER JÁ FUI ══
+function renderJaFui() {
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const cuisine=document.getElementById('filterCuisine').value;
+  const minStar=parseInt(document.getElementById('filterStars').value)||0;
+  const voltar=document.getElementById('filterVoltar').value;
+  const sort=document.getElementById('sortBy').value;
+  let list=restaurants.filter(r=>{
+    if(q&&!r.name.toLowerCase().includes(q)&&!(r.cuisine||'').toLowerCase().includes(q)&&!(r.city||'').toLowerCase().includes(q)&&!(r.notes||'').toLowerCase().includes(q))return false;
+    if(cuisine&&r.cuisine!==cuisine)return false;
+    if(minStar&&r.stars<minStar)return false;
+    if(voltar&&r.voltar!==voltar)return false;
+    return true;
+  });
+  if(sort==='stars')list.sort((a,b)=>(b.stars||0)-(a.stars||0));
+  else if(sort==='name')list.sort((a,b)=>a.name.localeCompare(b.name,'pt'));
+  else list.sort((a,b)=>b.created_at-a.created_at);
+
+  const grid=document.getElementById('grid-ja-fui');
+  if(!list.length){grid.innerHTML=`<div class="empty"><div class="empty-icon">🍽️</div><h3>${restaurants.length?'Nenhum resultado':'Nenhum restaurante ainda'}</h3><p>${restaurants.length?'Tente outros filtros.':'Clique em "+ Adicionar" para começar!'}</p></div>`;updateCuisineFilter();return;}
+
+  grid.innerHTML = list.map(r => {
+    const photos = photoCache[r.id] || [];
+    let galleryHTML = '';
+    if (photos.length > 0) {
+      const imgs = photos.map((p,i)=>`<img class="gallery-img${i===0?' active':''}" src="${p.data}" onclick="openLightbox('${r.id}',${i})">`).join('');
+      const nav = photos.length>1?`<div class="gallery-nav"><button class="gallery-btn visible" onclick="event.stopPropagation();galleryMove('${r.id}',-1)">‹</button><button class="gallery-btn visible" onclick="event.stopPropagation();galleryMove('${r.id}',1)">›</button></div>`:'';
+      const dots = photos.length>1?`<div class="gallery-dots">${photos.map((_,i)=>`<div class="gallery-dot${i===0?' active':''}"></div>`).join('')}</div>`:'';
+      const cnt = photos.length>1?`<div class="gallery-count" onclick="openLightbox('${r.id}',0)">1 / ${photos.length}</div>`:'';
+      galleryHTML=`<div class="card-gallery" id="gallery-${r.id}">${imgs}${nav}${dots}${cnt}</div>`;
+    } else {
+      galleryHTML=`<div class="card-gallery"><div class="gallery-placeholder">${cuisineEmoji(r.cuisine)}</div></div>`;
+    }
+    return `<div class="card">${galleryHTML}<div class="card-body"><div class="card-top"><div class="card-name">${esc(r.name)}</div><div class="card-actions">${r.maps_link?`<a class="icon-btn" href="${esc(r.maps_link)}" target="_blank" style="text-decoration:none">🗺️</a>`:''}<button class="icon-btn${r.fav?' fav-on':''}" onclick="toggleFav('${r.id}')">${r.fav?'❤️':'🤍'}</button><button class="icon-btn" onclick="openModal('${r.id}')">✏️</button><button class="icon-btn" onclick="deleteRest('${r.id}')">🗑️</button></div></div><div class="card-stars">${starsHTML(r.stars||0)}</div><div class="card-meta">${r.cuisine?`<span class="tag">${esc(r.cuisine)}</span>`:''}${r.city?`<span class="tag tag-city">📍 ${esc(r.city)}</span>`:''}${r.price?`<span class="tag tag-price">${esc(r.price)}</span>`:''}${r.date?`<span class="tag-date">📅 ${formatDate(r.date)}</span>`:''}${r.voltar?`<span class="badge-voltar ${voltarClass(r.voltar)}">${voltarLabel(r.voltar)}</span>`:''}</div>${r.notes?`<div class="card-notes">${esc(r.notes)}</div>`:''}</div></div>`;
+  }).join('');
+  updateCuisineFilter(); updateCuisineDatalist();
+}
+
+// ══ GALLERY ══
+function galleryMove(restId, dir) {
+  const c=document.getElementById('gallery-'+restId); if(!c)return;
+  const imgs=c.querySelectorAll('.gallery-img'), dots=c.querySelectorAll('.gallery-dot'), countEl=c.querySelector('.gallery-count');
+  let cur=Array.from(imgs).findIndex(i=>i.classList.contains('active'));
+  imgs[cur].classList.remove('active'); if(dots[cur])dots[cur].classList.remove('active');
+  cur=(cur+dir+imgs.length)%imgs.length;
+  imgs[cur].classList.add('active'); if(dots[cur])dots[cur].classList.add('active');
+  if(countEl)countEl.textContent=`${cur+1} / ${imgs.length}`;
+}
+
+// ══ LIGHTBOX ══
+function openLightbox(restId, startIndex) {
+  const photos = photoCache[restId] || [];
+  lbPhotos = photos.map(p=>p.data); lbIndex = startIndex;
+  showLightboxFrame();
+  document.getElementById('lightbox').classList.add('open');
+}
+function showLightboxFrame() {
+  document.getElementById('lightboxImg').src=lbPhotos[lbIndex];
+  document.getElementById('lightboxCounter').textContent=lbPhotos.length>1?`${lbIndex+1} / ${lbPhotos.length}`:'';
+  document.querySelector('.lightbox-prev').style.display=lbPhotos.length>1?'':'none';
+  document.querySelector('.lightbox-next').style.display=lbPhotos.length>1?'':'none';
+}
+function lightboxNav(dir){lbIndex=(lbIndex+dir+lbPhotos.length)%lbPhotos.length;showLightboxFrame();}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('open');}
+
+// ══ RENDER QUERO IR ══
+function renderQueroIr() {
+  const q=document.getElementById('wishSearch').value.toLowerCase();
+  const list=wishes.filter(w=>!q||w.name.toLowerCase().includes(q)||(w.cuisine||'').toLowerCase().includes(q)||(w.city||'').toLowerCase().includes(q));
+  const grid=document.getElementById('grid-quero-ir');
+  if(!list.length){grid.innerHTML=`<div class="empty"><div class="empty-icon">📌</div><h3>${wishes.length?'Nenhum resultado':'Lista vazia'}</h3><p>${wishes.length?'Tente outros termos.':'Adicione restaurantes que você quer visitar!'}</p></div>`;return;}
+  grid.innerHTML=list.map(w=>`<div class="wishcard"><div class="wishcard-top"><div class="card-name">${esc(w.name)}</div><div class="card-actions"><button class="icon-btn" onclick="openWishModal('${w.id}')">✏️</button><button class="icon-btn" onclick="deleteWish('${w.id}')">🗑️</button></div></div><div class="card-meta">${w.cuisine?`<span class="tag">${esc(w.cuisine)}</span>`:''}${w.city?`<span class="tag tag-city">📍 ${esc(w.city)}</span>`:''}</div>${w.notes?`<div class="wishcard-notes">${esc(w.notes)}</div>`:''}<button class="btn-convert" onclick="convertWish('${w.id}')">✅ Já fui! Avaliar</button></div>`).join('');
+}
+
+// ══ RANKING ══
+function renderRanking() {
+  const el=document.getElementById('rankingContent');
+  if(!restaurants.length){el.innerHTML=`<div class="empty"><div class="empty-icon">🏆</div><h3>Nada por aqui ainda</h3><p>Adicione restaurantes na aba "Já Fui" para ver o ranking.</p></div>`;return;}
+  const dist=[5,4,3,2,1].map(n=>({n,count:restaurants.filter(r=>r.stars===n).length}));
+  const maxC=Math.max(...dist.map(d=>d.count),1);
+  const chartHTML=`<div class="chart-wrap"><h3>Distribuição de Estrelas</h3>${dist.map(d=>`<div class="chart-row"><div class="chart-label">${'★'.repeat(d.n)}</div><div class="chart-bar-bg"><div class="chart-bar" style="width:${(d.count/maxC*100).toFixed(1)}%"></div></div><div class="chart-count">${d.count}</div></div>`).join('')}</div>`;
+  const topAll=[...restaurants].filter(r=>r.stars).sort((a,b)=>b.stars-a.stars||b.created_at-a.created_at).slice(0,10);
+  const favs=restaurants.filter(r=>r.fav);
+  const cuisines=[...new Set(restaurants.map(r=>r.cuisine).filter(Boolean))];
+  const rankItem=(r,pos,showPos=true)=>{
+    const photos=photoCache[r.id]||[];
+    const cover=photos.length?`<img class="rank-cover" src="${photos[0].data}">`:`<div class="rank-cover-ph">${cuisineEmoji(r.cuisine)}</div>`;
+    const pc=pos===1?'gold':pos===2?'silver':pos===3?'bronze':'';
+    return`<div class="rank-item">${showPos?`<div class="rank-pos ${pc}">${pos}</div>`:''} ${cover}<div class="rank-info"><div class="rank-name">${esc(r.name)}${r.fav?' ❤️':''}</div><div class="rank-meta"><div class="rank-stars">${starsHTML(r.stars||0)}</div>${r.cuisine?`<span class="tag" style="font-size:.68rem;padding:2px 7px">${esc(r.cuisine)}</span>`:''}${r.city?`<span class="tag tag-city" style="font-size:.68rem;padding:2px 7px">📍 ${esc(r.city)}</span>`:''}${r.price?`<span class="tag tag-price" style="font-size:.68rem;padding:2px 7px">${esc(r.price)}</span>`:''}</div></div></div>`;
+  };
+  let byCuisine='';
+  if(cuisines.length){
+    byCuisine=`<div class="ranking-section"><div class="ranking-title">🍜 Por Culinária</div>${cuisines.map(c=>{const g=[...restaurants].filter(r=>r.cuisine===c&&r.stars).sort((a,b)=>b.stars-a.stars).slice(0,3);if(!g.length)return'';return`<div style="margin-bottom:18px"><div style="font-size:.82rem;text-transform:uppercase;letter-spacing:.07em;color:var(--text-muted);font-weight:500;margin-bottom:8px">${esc(c)}</div><div class="ranking-list">${g.map((r,i)=>rankItem(r,i+1,false)).join('')}</div></div>`;}).join('')}</div>`;
+  }
+  el.innerHTML=chartHTML+`<div class="ranking-section"><div class="ranking-title">🥇 Top Geral</div><div class="ranking-list">${topAll.length?topAll.map((r,i)=>rankItem(r,i+1)).join(''):'<div class="ranking-empty">Sem avaliações com estrelas ainda.</div>'}</div></div>`+`<div class="ranking-section"><div class="ranking-title">❤️ Favoritos</div><div class="ranking-list">${favs.length?favs.map((r,i)=>rankItem(r,i+1,false)).join(''):'<div class="ranking-empty">Nenhum favorito ainda.</div>'}</div></div>`+byCuisine;
+  setTimeout(()=>{document.querySelectorAll('.chart-bar').forEach(b=>{const w=b.style.width;b.style.width='0';requestAnimationFrame(()=>{b.style.width=w;});});},50);
+}
+
+// ══ BACKUP ══
+async function exportBackup() {
+  const allPhotos = Object.values(photoCache).flat();
+  const backup = { version: 2, exportedAt: new Date().toISOString(), restaurants, wishes, photos: allPhotos };
+  const json = JSON.stringify(backup);
+  const date = new Date().toLocaleDateString('pt-BR').replace(/\//g,'-');
+  const filename = `sushinados_backup_${date}.json`;
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (isIOS) {
+    const a = document.createElement('a');
+    a.href = 'data:application/json;charset=utf-8,'+encodeURIComponent(json);
+    a.download = filename; a.click();
+  } else {
+    const blob = new Blob([json],{type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+}
+
+async function importBackup(e) {
+  const file=e.target.files[0]; if(!file)return;
+  const text=await file.text();
+  let backup; try{backup=JSON.parse(text);}catch{alert('Arquivo inválido.');return;}
+  if(!backup.restaurants||!backup.wishes){alert('Arquivo não reconhecido.');return;}
+  if(!confirm(`Importar ${backup.restaurants.length} restaurante(s)?\nOs dados atuais serão substituídos.`))return;
+  showSaving();
+  try {
+    await sb.from('photos').delete().neq('id','__none__');
+    await sb.from('wishes').delete().neq('id','__none__');
+    await sb.from('restaurants').delete().neq('id','__none__');
+    for(const r of backup.restaurants) await sb.from('restaurants').insert({...r,visit_date:r.date||r.visit_date,user_id:currentUser.id});
+    for(const w of backup.wishes) await sb.from('wishes').insert({...w,user_id:currentUser.id});
+    for(const p of (backup.photos||[])) await sb.from('photos').insert({...p,user_id:currentUser.id});
+    await loadAll(); renderAll();
+  } catch(err){alert('Erro na importação: '+err.message);}
+  finally{hideSaving(); e.target.value='';}
+}
+
+// ══ HELPERS ══
+function starsHTML(n){return[1,2,3,4,5].map(i=>`<span class="${i<=n?'card-star-on':'card-star-off'}">★</span>`).join('');}
+function voltarClass(v){return v==='sim'?'badge-sim':v==='talvez'?'badge-talvez':'badge-nao';}
+function voltarLabel(v){return v==='sim'?'✅ Quer voltar':v==='talvez'?'🤔 Talvez':'❌ Não volta';}
+function cuisineEmoji(c){if(!c)return'🍽️';const m={'japonesa':'🍣','sushi':'🍣','temaki':'🍣','italiana':'🍝','pizza':'🍕','pizzaria':'🍕','brasileira':'🥩','churrasco':'🥩','mexicana':'🌮','árabe':'🥙','chinesa':'🥡','tailandesa':'🍜','francesa':'🥐','hamburgueria':'🍔','hamburguer':'🍔','frutos do mar':'🦞','peixe':'🐟','doceria':'🍰','sorvete':'🍦','vegana':'🥗','vegetariana':'🥗','indiana':'🍛','espanhola':'🥘'};const cl=c.toLowerCase();for(const[k,v]of Object.entries(m)){if(cl.includes(k))return v;}return'🍽️';}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function formatDate(iso){if(!iso)return'';const[y,m,d]=iso.split('-');return`${d}/${m}/${y}`;}
+function updateCuisineFilter(){const sel=document.getElementById('filterCuisine');const cur=sel.value;const types=[...new Set(restaurants.map(r=>r.cuisine).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt'));sel.innerHTML='<option value="">Todos os tipos</option>'+types.map(t=>`<option value="${esc(t)}"${t===cur?' selected':''}>${esc(t)}</option>`).join('');}
+function updateCuisineDatalist(){document.getElementById('cuisineList').innerHTML=[...new Set(restaurants.map(r=>r.cuisine).filter(Boolean))].map(t=>`<option value="${esc(t)}">`).join('');}
+function updateStats(){document.getElementById('statTotal').textContent=restaurants.length;const ws=restaurants.filter(r=>r.stars);document.getElementById('statAvg').textContent=ws.length?(ws.reduce((s,r)=>s+r.stars,0)/ws.length).toFixed(1)+' ★':'—';document.getElementById('statFav').textContent=restaurants.filter(r=>r.fav).length;document.getElementById('statWish').textContent=wishes.length;document.getElementById('cnt-ja-fui').textContent=restaurants.length;document.getElementById('cnt-quero-ir').textContent=wishes.length;}
+function renderAll(){updateStats();renderJaFui();renderQueroIr();}
+
+// ══ KEYBOARD ══
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeModal('modalJaFui');closeModal('modalQueroIr');closeLightbox();}
+  const lb=document.getElementById('lightbox').classList.contains('open');
+  if(lb&&e.key==='ArrowLeft')lightboxNav(-1);
+  if(lb&&e.key==='ArrowRight')lightboxNav(1);
+});
+
+// ══ BOOT ══
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (session) {
+    currentUser = session.user;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('loadingScreen').style.display = 'flex';
+    document.getElementById('loadingScreen').querySelector('p').textContent = 'Carregando seus restaurantes…';
+    await loadAll();
+    document.getElementById('appScreen').style.display = 'block';
+    document.getElementById('loadingScreen').style.display = 'none';
+    renderAll();
+  } else {
+    currentUser = null;
+    document.getElementById('appScreen').style.display = 'none';
+    document.getElementById('loadingScreen').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+});
+</script>
+</body>
+</html>
