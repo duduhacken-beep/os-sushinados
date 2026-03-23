@@ -907,7 +907,12 @@ sb.auth.onAuthStateChange(async (event, session) => {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('loadingScreen').style.display = 'flex';
     document.getElementById('loadingScreen').querySelector('p').textContent = 'Carregando seus restaurantes…';
-    await loadAll();
+    try {
+      await loadAll();
+    } catch(e) {
+      console.error('Erro ao carregar dados:', e);
+      // Continua mesmo com erro — mostra o app vazio
+    }
     document.getElementById('appScreen').style.display = 'block';
     document.getElementById('loadingScreen').style.display = 'none';
     renderAll();
